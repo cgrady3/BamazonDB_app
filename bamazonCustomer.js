@@ -58,7 +58,7 @@ function buyItem() {
 
       if (err) throw err;
 
-      // 
+      //
       var chosenItem;
       for (var i = 0; i < res.length; i++) {
         if (res[i].product_name === answer.item) {
