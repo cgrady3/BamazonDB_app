@@ -1,5 +1,6 @@
-var mysql = require('mysql');
-var inquirer = require('inquirer');
+const mysql = require('mysql');
+const inquirer = require('inquirer');
+var total = 0;
 
 // create the connection information for the sql database
 var connection = mysql.createConnection({
@@ -18,44 +19,49 @@ connection.connect(function (err) {
   showItems();
 });
 
+// display bamazons inventory and product details
 function showItems() {
   connection.query("SELECT * FROM products", function (err, res) {
     if (err) throw err;
     for (var i = 0; i < res.length; i++) {
-      console.log("Product: " + res[i].product_name + "\n" +
+      console.log("\nProduct: " + res[i].product_name + "\n" +
         "Department: " + res[i].department_name + "\n" +
         "Price: $" + res[i].price + "\n" +
         "Stock: " + res[i].stock_quantity);
-      console.log("----------------------------------------");
+      console.log("\n----------------------------------------\n");
     }
     buyItem();
   });
 
 };
 
+// user selects which item to buy and how many
 function buyItem() {
-  inquirer.prompt([{
-    name: 'item',
-    type: 'list',
-    choices: function () {
-      var choiceArray = [];
-      for (var i = 0; i < res.length; i++) {
-        choiceArray.push(res[i].product_name);
-      }
-      return choiceArray;
+  connection.query("SELECT * FROM products", function (err, res) {
+    inquirer.prompt([{
+      name: 'item',
+      type: 'list',
+      choices: function () {
+        var choiceArray = [];
+        for (var i = 0; i < res.length; i++) {
+          choiceArray.push(res[i].product_name);
+        }
+        return choiceArray;
+      },
+      message: 'What would you like to buy?',
     },
-    message: 'What would you like to buy?',
-  }, {
-    name: "quantity",
-    message: "How many would you like to purchase?"
-  }]).then(function (answer) {
+    {
+      name: "quantity",
+      message: "How many would you like to purchase?"
+    }
+    ]).then(function (answer) {
 
-    connection.query("SELECT * FROM products", function (err, res) {
       if (err) throw err;
 
+      // 
       var chosenItem;
       for (var i = 0; i < res.length; i++) {
-        if (res[i].item_id === answer.item) {
+        if (res[i].product_name === answer.item) {
           chosenItem = res[i];
         }
       }
@@ -71,15 +77,59 @@ function buyItem() {
               item_id: chosenItem.item_id
             }
           ],
-          function (error) {
-            if (error) throw error;
-            console.log("Thank you for your business! Your total is " + "$" + parseInt(answer.quantity) * chosenItem.price);
+          function (err) {
+            if (err) throw err;
+
+            // update shoppers total
+            total += parseInt(answer.quantity) * (chosenItem.price).toFixed(2);
+            // display shoppers total
+            console.log("Your total is $" + total);
+
+            continueShopping();
           }
-        );
+        )
       }
       else {
         console.log("We're sorry. We don't have enough in stock.");
+
+        continueShopping();
       }
-    });
+    })
   });
-};
+}
+
+// give the customer an option to keep shopping or exit the program
+function continueShopping() {
+  inquirer.prompt([{
+    name: 'answer',
+    type: 'list',
+    choices: ['yes', 'no'],
+    message: 'Would you like to continue shopping?',
+  }
+  ]).then(function (answer) {
+
+    if (answer.answer == 'yes') {
+      showItems();
+    }
+    else {
+      process.exit(0);
+    }
+  })
+}
+
+// use this to refill select stock quantities by ite id
+// connection.query(
+//   "UPDATE products SET ? WHERE ?",
+//   [
+//     {
+//       stock_quantity: 15
+//     },
+//     {
+//       item_id: 1
+//     }
+//   ],
+//   function (err) {
+//     if (err) throw err;
+//     //console.log("Thank you for your business! Your total is " + "$" + parseInt(answer.quantity) * chosenItem.price);
+//   }
+// );
